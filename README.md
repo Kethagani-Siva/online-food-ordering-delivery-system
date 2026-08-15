@@ -4,13 +4,14 @@ A full-stack web app for browsing menus, placing orders, and tracking deliveries
 =======
 # Online Food Ordering & Delivery Management System
 
-A full-stack internship project that simulates a restaurant ordering workflow online. Customers can browse the menu, add food items to a cart, place an order, and track delivery status. Restaurant staff can manage the menu and update order progress from an admin dashboard.
+A full-stack internship project that simulates a restaurant ordering workflow online. Customers can browse the menu, add food items to a cart, place an order, and track delivery status. Restaurant staff can manage the menu, update order progress, and maintain restaurant details from an admin dashboard.
 
 ## Tech Stack
 
 - Frontend: HTML5, CSS3, Vanilla JavaScript
 - Backend: Node.js + Express
-- Data Storage: JSON files in the data folder
+- Authentication: Express Session + bcrypt for hashing passwords
+- Data Storage: Local JSON files in the data folder
 - Version Control: Git
 
 ## Project Structure
@@ -22,7 +23,9 @@ food-delivery-app/
 ├── .gitignore
 ├── data/
 │   ├── menu.json
-│   └── orders.json
+│   ├── orders.json
+│   ├── users.json
+│   └── restaurant.json
 ├── public/
 │   ├── index.html
 │   ├── admin.html
@@ -43,16 +46,48 @@ food-delivery-app/
 - Filter by category
 - Add items to the cart and adjust quantities
 - Show live subtotal and total
-- Submit customer details and place an order
+- Sign up or log in for a faster repeat-order experience
+- Checkout as a guest or as a logged-in customer
 - Track order status from Placed to Delivered
-- Poll fresh status updates without reloading the page
+- View a personal order history when logged in
 
 ### Admin Features
+- Admin-only dashboard login
 - View all orders in one dashboard
 - Update status progression for each order
 - Add new menu items
 - Edit existing items
 - Delete menu items
+- View and update restaurant profile details
+
+## Authentication Flow
+
+### Customer signup and login
+- Customers can create an account from the customer page modal.
+- Passwords are never stored in plain text; bcrypt hashes them before saving.
+- The app uses server-side sessions with express-session.
+- After login, customer checkout fields are pre-filled with the saved profile, while still allowing manual editing before each order.
+- Guest checkout continues to work without login.
+
+### Admin login
+- The admin dashboard is protected by a separate login screen.
+- The app uses one hardcoded admin account with the username `admin`.
+- The admin password is loaded from the `ADMIN_PASSWORD` environment variable when available.
+- If not set, a default demo password is used for easier local testing: `Admin@123`.
+
+## Environment Variables
+
+Create a `.env` file in the project root if needed for production-style configuration:
+
+```bash
+SESSION_SECRET=your-session-secret
+ADMIN_PASSWORD=your-secure-admin-password
+```
+
+For the first admin login, use:
+
+- Username: `admin`
+- Password: the value from `ADMIN_PASSWORD` or the demo fallback `Admin@123`
 
 ## Installation
 
@@ -81,6 +116,13 @@ npm run dev
 
 - Customer site: http://localhost:3000/
 - Admin dashboard: http://localhost:3000/admin
+
+## Known Limitations
+
+- No real payment gateway is integrated.
+- No live GPS tracking is implemented for delivery riders.
+- This project uses JSON files for persistence instead of a production database.
+- The authentication flow is demonstration-ready for a college internship project, not a production-grade secure system.
 
 ## Notes
 

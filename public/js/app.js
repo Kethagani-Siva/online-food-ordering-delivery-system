@@ -3,7 +3,11 @@ const state = {
   category: 'All',
   cart: [],
   currentOrderId: null,
-  statusPoller: null
+  statusPoller: null,
+  auth: {
+    loggedIn: false,
+    user: null
+  }
 };
 
 const currency = new Intl.NumberFormat('en-IN', {
@@ -28,6 +32,15 @@ const trackingTotal = document.getElementById('tracking-total');
 const refreshStatusButton = document.getElementById('refresh-status');
 const progressFill = document.getElementById('progress-fill');
 const progressSteps = document.querySelectorAll('.step');
+const authToggleButton = document.getElementById('auth-toggle');
+const authModal = document.getElementById('auth-modal');
+const closeAuthModalButton = document.getElementById('close-auth-modal');
+const authTabs = document.querySelectorAll('.auth-tab');
+const loginForm = document.getElementById('login-form');
+const signupForm = document.getElementById('signup-form');
+const myOrdersSection = document.getElementById('my-orders-section');
+const myOrdersList = document.getElementById('my-orders-list');
+const loadMyOrdersButton = document.getElementById('load-my-orders');
 
 async function initializeApp() {
   await loadMenu();
@@ -35,6 +48,7 @@ async function initializeApp() {
   renderMenu();
   renderCart();
   attachEvents();
+  await checkCustomerAuth();
 }
 
 async function loadMenu() {
@@ -59,6 +73,216 @@ function attachEvents() {
       refreshOrderStatus(state.currentOrderId);
     }
   });
+
+  authToggleButton.addEventListener('click', () => {
+    if (state.auth.loggedIn) {
+      logoutCustomer();
+      return;
+    }
+
+    openAuthModal();
+  });
+
+  closeAuthModalButton.addEventListener('click', closeAuthModal);
+  authTabs.forEach((tab) => {
+    tab.addEventListener('click', () => switchAuthView(tab.dataset.authView));
+  });
+
+  loginForm.addEventListener('submit', handleLogin);
+  signupForm.addEventListener('submit', handleSignup);
+  loadMyOrdersButton.addEventListener('click', () => {
+    if (state.auth.loggedIn) {
+      loadMyOrders();
+    }
+  });
+
+  authModal.addEventListener('click', (event) => {
+    if (event.target === authModal) {
+      closeAuthModal();
+    }
+  });
+}
+
+function openAuthModal() {
+  authModal.classList.remove('hidden');
+}
+
+function closeAuthModal() {
+  authModal.classList.add('hidden');
+}
+
+function switchAuthView(view) {
+  const isLogin = view === 'login';
+  authTabs.forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.authView === view);
+  });
+  loginForm.classList.toggle('hidden', !isLogin);
+  signupForm.classList.toggle('hidden', isLogin);
+}
+
+async function checkCustomerAuth() {
+  try {
+    const response = await fetch('/api/auth/me');
+    const data = await response.json();
+
+    if (!response.ok || !data.loggedIn) {
+      state.auth.loggedIn = false;
+      state.auth.user = null;
+      myOrdersSection.classList.add('hidden');
+      authToggleButton.textContent = 'Login';
+      return;
+    }
+
+    state.auth.loggedIn = true;
+    state.auth.user = data.user;
+    authToggleButton.textContent = `Hi, ${data.user.name.split(' ')[0]}`;
+    populateCheckoutFields(data.user);
+    myOrdersSection.classList.remove('hidden');
+    await loadMyOrders();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function populateCheckoutFields(user) {
+  if (!user) return;
+
+  const nameInput = checkoutForm.querySelector('input[name="name"]');
+  const phoneInput = checkoutForm.querySelector('input[name="phone"]');
+  const addressInput = checkoutForm.querySelector('textarea[name="address"]');
+
+  if (nameInput) nameInput.value = user.name || '';
+  if (phoneInput) phoneInput.value = user.phone || '';
+  if (addressInput) addressInput.value = user.address || '';
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Login failed.');
+    }
+
+    closeAuthModal();
+    loginForm.reset();
+    await checkCustomerAuth();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function handleSignup(event) {
+  event.preventDefault();
+
+  const payload = {
+    name: document.getElementById('signup-name').value.trim(),
+    email: document.getElementById('signup-email').value.trim(),
+    password: document.getElementById('signup-password').value,
+    phone: document.getElementById('signup-phone').value.trim(),
+    address: document.getElementById('signup-address').value.trim()
+  };
+
+  try {
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Signup failed.');
+    }
+
+    closeAuthModal();
+    signupForm.reset();
+    await checkCustomerAuth();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function logoutCustomer() {
+  try {
+    const response = await fetch('/api/auth/logout', { method: 'POST' });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Unable to logout.');
+    }
+
+    state.auth.loggedIn = false;
+    state.auth.user = null;
+    authToggleButton.textContent = 'Login';
+    myOrdersSection.classList.add('hidden');
+    myOrdersList.innerHTML = '';
+    checkoutForm.reset();
+    alert(data.message);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function loadMyOrders() {
+  if (!state.auth.loggedIn) {
+    myOrdersSection.classList.add('hidden');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/orders/mine');
+    const orders = await response.json();
+
+    if (!response.ok) {
+      throw new Error(orders.error || 'Unable to load your orders.');
+    }
+
+    if (!orders.length) {
+      myOrdersList.innerHTML = '<div class="empty-cart">You have no past orders yet.</div>';
+      myOrdersSection.classList.remove('hidden');
+      return;
+    }
+
+    myOrdersList.innerHTML = orders
+      .map(
+        (order) => `
+          <div class="order-history-item">
+            <div class="order-history-header">
+              <strong>${order.id}</strong>
+              <span class="status-badge ${order.status.toLowerCase().replace(/\s+/g, '-')}">${order.status}</span>
+            </div>
+            <div class="order-history-meta">
+              <span>${new Date(order.createdAt).toLocaleString()}</span>
+              <span>${currency.format(order.total)}</span>
+            </div>
+            <ul>
+              ${order.items
+                .map((item) => `<li>${item.name} × ${item.quantity}</li>`)
+                .join('')}
+            </ul>
+          </div>
+        `
+      )
+      .join('');
+
+    myOrdersSection.classList.remove('hidden');
+  } catch (error) {
+    myOrdersList.innerHTML = `<div class="empty-cart">${error.message}</div>`;
+    myOrdersSection.classList.remove('hidden');
+  }
 }
 
 function renderFilters() {
@@ -244,6 +468,10 @@ async function handleCheckout(event) {
     showTracking(data);
     refreshOrderStatus(data.id);
     startPolling(data.id);
+
+    if (state.auth.loggedIn) {
+      await loadMyOrders();
+    }
   } catch (error) {
     alert(error.message);
   }

@@ -1,6 +1,8 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcrypt');
+const session = require('express-session');
 
 const app = express();
 const PORT = 3000;
@@ -8,10 +10,27 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
 const MENU_PATH = path.join(DATA_DIR, 'menu.json');
 const ORDERS_PATH = path.join(DATA_DIR, 'orders.json');
+const USERS_PATH = path.join(DATA_DIR, 'users.json');
+const RESTAURANT_PATH = path.join(DATA_DIR, 'restaurant.json');
 const VALID_STATUSES = ['Placed', 'Preparing', 'Out for Delivery', 'Delivered'];
+const ADMIN_USERNAME = 'admin';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'foodiecart-secret';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin@123';
+const ADMIN_PASSWORD_HASH = bcrypt.hashSync(ADMIN_PASSWORD, 10);
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  session({
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax'
+    }
+  })
+);
 
 function readJson(filePath) {
   try {
@@ -36,6 +55,25 @@ function sendError(res, statusCode, message) {
 
 function sanitizeText(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function ensureDataFiles() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+
+  if (!fs.existsSync(USERS_PATH)) {
+    writeJson(USERS_PATH, []);
+  }
+
+  if (!fs.existsSync(RESTAURANT_PATH)) {
+    writeJson(RESTAURANT_PATH, {
+      name: 'Foodie Cart Kitchen',
+      address: '22 Market Street, Bengaluru, India',
+      phone: '+91 98765 43210',
+      openingHours: 'Mon-Sun: 10:00 AM - 11:30 PM'
+    });
+  }
 }
 
 function validateMenuPayload(payload) {
@@ -63,14 +101,47 @@ function validateMenuPayload(payload) {
 }
 
 function buildOrderSummary(items) {
-  return items.map((item) => ({
-    id: Number(item.id),
-    name: sanitizeText(item.name),
-    price: Number(item.price),
-    quantity: Number(item.quantity)
-  })).filter((item) => item.id && item.name && item.quantity > 0 && item.price > 0);
+  return items
+    .map((item) => ({
+      id: Number(item.id),
+      name: sanitizeText(item.name),
+      price: Number(item.price),
+      quantity: Number(item.quantity)
+    }))
+    .filter((item) => item.id && item.name && item.quantity > 0 && item.price > 0);
 }
 
+function requireCustomerAuth(req, res, next) {
+  if (!req.session || !req.session.user) {
+    return sendError(res, 401, 'Customer authentication required.');
+  }
+
+  next();
+}
+
+function requireAdminAuth(req, res, next) {
+  if (!req.session || !req.session.adminAuthenticated) {
+    return sendError(res, 401, 'Admin authentication required.');
+  }
+
+  next();
+}
+
+function buildUserResponse(user) {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    address: user.address
+  };
+}
+
+ensureDataFiles();
 app.use(express.static(PUBLIC_DIR));
 
 app.get('/', (req, res) => {
@@ -79,6 +150,157 @@ app.get('/', (req, res) => {
 
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
+});
+
+app.get(['/adimin', '/adimin/'], (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
+});
+
+app.get('/api/auth/me', (req, res) => {
+  if (!req.session || !req.session.user) {
+    return res.json({ loggedIn: false, user: null });
+  }
+
+  return res.json({
+    loggedIn: true,
+    user: buildUserResponse(req.session.user)
+  });
+});
+
+app.get('/api/admin/me', (req, res) => {
+  if (!req.session || !req.session.adminAuthenticated) {
+    return res.json({ loggedIn: false, username: null });
+  }
+
+  res.json({ loggedIn: true, username: ADMIN_USERNAME });
+});
+
+app.post('/api/auth/signup', (req, res) => {
+  try {
+    const { name, email, password, phone, address } = req.body || {};
+    const cleanName = sanitizeText(name);
+    const cleanEmail = sanitizeText(email).toLowerCase();
+    const cleanPhone = sanitizeText(phone);
+    const cleanAddress = sanitizeText(address);
+    const cleanPassword = typeof password === 'string' ? password : '';
+
+    if (!cleanName || !cleanEmail || !cleanPassword || !cleanPhone || !cleanAddress) {
+      return sendError(res, 400, 'Name, email, password, phone, and address are required.');
+    }
+
+    if (cleanPassword.length < 6) {
+      return sendError(res, 400, 'Password must be at least 6 characters long.');
+    }
+
+    const users = readJson(USERS_PATH);
+    const existingUser = users.find((user) => user.email.toLowerCase() === cleanEmail);
+
+    if (existingUser) {
+      return sendError(res, 409, 'An account with this email already exists.');
+    }
+
+    const newUser = {
+      id: Date.now(),
+      name: cleanName,
+      email: cleanEmail,
+      hashedPassword: bcrypt.hashSync(cleanPassword, 10),
+      phone: cleanPhone,
+      address: cleanAddress,
+      createdAt: new Date().toISOString()
+    };
+
+    users.push(newUser);
+    writeJson(USERS_PATH, users);
+
+    req.session.user = buildUserResponse(newUser);
+    return res.status(201).json({
+      message: 'Signup successful.',
+      user: buildUserResponse(newUser)
+    });
+  } catch (error) {
+    return sendError(res, 500, error.message);
+  }
+});
+
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    const cleanEmail = sanitizeText(email).toLowerCase();
+    const cleanPassword = typeof password === 'string' ? password : '';
+
+    if (!cleanEmail || !cleanPassword) {
+      return sendError(res, 400, 'Email and password are required.');
+    }
+
+    const users = readJson(USERS_PATH);
+    const user = users.find((entry) => entry.email.toLowerCase() === cleanEmail);
+
+    if (!user || !bcrypt.compareSync(cleanPassword, user.hashedPassword)) {
+      return sendError(res, 401, 'Invalid email or password.');
+    }
+
+    req.session.user = buildUserResponse(user);
+    return res.json({
+      message: 'Login successful.',
+      user: buildUserResponse(user)
+    });
+  } catch (error) {
+    return sendError(res, 500, error.message);
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  if (req.session) {
+    req.session.destroy((error) => {
+      if (error) {
+        return sendError(res, 500, 'Unable to log out.');
+      }
+
+      return res.json({ message: 'Logout successful.' });
+    });
+    return;
+  }
+
+  return res.json({ message: 'Logout successful.' });
+});
+
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body || {};
+  const cleanUsername = sanitizeText(username);
+  const cleanPassword = typeof password === 'string' ? password : '';
+
+  if (!cleanUsername || !cleanPassword) {
+    return sendError(res, 400, 'Username and password are required.');
+  }
+
+  if (cleanUsername !== ADMIN_USERNAME) {
+    return sendError(res, 401, 'Invalid admin credentials.');
+  }
+
+  const isValidAdmin = bcrypt.compareSync(cleanPassword, ADMIN_PASSWORD_HASH);
+
+  if (!isValidAdmin) {
+    return sendError(res, 401, 'Invalid admin credentials.');
+  }
+
+  req.session.adminAuthenticated = true;
+  req.session.admin = { username: ADMIN_USERNAME };
+  return res.json({ message: 'Admin login successful.' });
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  if (req.session) {
+    req.session.destroy((error) => {
+      if (error) {
+        return sendError(res, 500, 'Unable to log out.');
+      }
+
+      return res.json({ message: 'Admin logout successful.' });
+    });
+    return;
+  }
+
+  return res.json({ message: 'Admin logout successful.' });
 });
 
 app.get('/api/menu', (req, res) => {
@@ -105,7 +327,7 @@ app.get('/api/menu/:id', (req, res) => {
   }
 });
 
-app.post('/api/menu', (req, res) => {
+app.post('/api/menu', requireAdminAuth, (req, res) => {
   try {
     const validated = validateMenuPayload(req.body);
 
@@ -121,13 +343,13 @@ app.post('/api/menu', (req, res) => {
 
     menu.push(newItem);
     writeJson(MENU_PATH, menu);
-    res.status(201).json(newItem);
+    return res.status(201).json(newItem);
   } catch (error) {
-    sendError(res, 500, error.message);
+    return sendError(res, 500, error.message);
   }
 });
 
-app.put('/api/menu/:id', (req, res) => {
+app.put('/api/menu/:id', requireAdminAuth, (req, res) => {
   try {
     const validated = validateMenuPayload(req.body);
 
@@ -149,13 +371,13 @@ app.put('/api/menu/:id', (req, res) => {
     };
 
     writeJson(MENU_PATH, menu);
-    res.json(menu[menuIndex]);
+    return res.json(menu[menuIndex]);
   } catch (error) {
-    sendError(res, 500, error.message);
+    return sendError(res, 500, error.message);
   }
 });
 
-app.delete('/api/menu/:id', (req, res) => {
+app.delete('/api/menu/:id', requireAdminAuth, (req, res) => {
   try {
     const menu = readJson(MENU_PATH);
     const itemIndex = menu.findIndex((item) => Number(item.id) === Number(req.params.id));
@@ -166,18 +388,38 @@ app.delete('/api/menu/:id', (req, res) => {
 
     const removedItem = menu.splice(itemIndex, 1)[0];
     writeJson(MENU_PATH, menu);
-    res.json({ message: 'Menu item deleted successfully.', deletedItem: removedItem });
+    return res.json({ message: 'Menu item deleted successfully.', deletedItem: removedItem });
   } catch (error) {
-    sendError(res, 500, error.message);
+    return sendError(res, 500, error.message);
   }
 });
 
 app.get('/api/orders', (req, res) => {
   try {
     const orders = readJson(ORDERS_PATH);
-    res.json(orders);
+    return res.json(orders);
   } catch (error) {
-    sendError(res, 500, error.message);
+    return sendError(res, 500, error.message);
+  }
+});
+
+app.get('/api/orders/mine', requireCustomerAuth, (req, res) => {
+  try {
+    const orders = readJson(ORDERS_PATH);
+    const userId = req.session.user.id;
+    const email = req.session.user.email;
+
+    const myOrders = orders
+      .filter((order) => {
+        const matchesUserId = Number(order.userId) === Number(userId);
+        const matchesEmail = order.customer && order.customer.email === email;
+        return matchesUserId || matchesEmail;
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return res.json(myOrders);
+  } catch (error) {
+    return sendError(res, 500, error.message);
   }
 });
 
@@ -190,9 +432,9 @@ app.get('/api/orders/:id', (req, res) => {
       return sendError(res, 404, 'Order not found.');
     }
 
-    res.json(order);
+    return res.json(order);
   } catch (error) {
-    sendError(res, 500, error.message);
+    return sendError(res, 500, error.message);
   }
 });
 
@@ -202,6 +444,7 @@ app.post('/api/orders', (req, res) => {
     const name = sanitizeText(customer && customer.name);
     const phone = sanitizeText(customer && customer.phone);
     const address = sanitizeText(customer && customer.address);
+    const loggedUser = req.session && req.session.user ? req.session.user : null;
 
     if (!name || !phone || !address) {
       return sendError(res, 400, 'Customer name, phone number, and address are required.');
@@ -221,10 +464,12 @@ app.post('/api/orders', (req, res) => {
     const orders = readJson(ORDERS_PATH);
     const newOrder = {
       id: `ORD-${Date.now()}`,
+      userId: loggedUser ? Number(loggedUser.id) : null,
       customer: {
         name,
         phone,
-        address
+        address,
+        email: loggedUser ? loggedUser.email : null
       },
       items: sanitizedItems,
       total: Number(total.toFixed(2)),
@@ -234,13 +479,13 @@ app.post('/api/orders', (req, res) => {
 
     orders.push(newOrder);
     writeJson(ORDERS_PATH, orders);
-    res.status(201).json(newOrder);
+    return res.status(201).json(newOrder);
   } catch (error) {
-    sendError(res, 500, error.message);
+    return sendError(res, 500, error.message);
   }
 });
 
-app.put('/api/orders/:id/status', (req, res) => {
+app.put('/api/orders/:id/status', requireAdminAuth, (req, res) => {
   try {
     const { status } = req.body;
     const normalizedStatus = sanitizeText(status);
@@ -258,9 +503,38 @@ app.put('/api/orders/:id/status', (req, res) => {
 
     orders[orderIndex].status = normalizedStatus;
     writeJson(ORDERS_PATH, orders);
-    res.json(orders[orderIndex]);
+    return res.json(orders[orderIndex]);
   } catch (error) {
-    sendError(res, 500, error.message);
+    return sendError(res, 500, error.message);
+  }
+});
+
+app.get('/api/restaurant', (req, res) => {
+  try {
+    const restaurant = readJson(RESTAURANT_PATH);
+    return res.json(restaurant);
+  } catch (error) {
+    return sendError(res, 500, error.message);
+  }
+});
+
+app.put('/api/restaurant', requireAdminAuth, (req, res) => {
+  try {
+    const restaurant = readJson(RESTAURANT_PATH);
+    const { name, address, phone, openingHours } = req.body || {};
+
+    const nextRestaurant = {
+      ...restaurant,
+      name: sanitizeText(name) || restaurant.name,
+      address: sanitizeText(address) || restaurant.address,
+      phone: sanitizeText(phone) || restaurant.phone,
+      openingHours: sanitizeText(openingHours) || restaurant.openingHours
+    };
+
+    writeJson(RESTAURANT_PATH, nextRestaurant);
+    return res.json(nextRestaurant);
+  } catch (error) {
+    return sendError(res, 500, error.message);
   }
 });
 

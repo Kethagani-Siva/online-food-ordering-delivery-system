@@ -24,6 +24,7 @@
           <a href="#menu">Menu</a>
           <a href="#checkout">Checkout</a>
           <a href="/admin">Admin</a>
+          <button type="button" id="auth-toggle" class="secondary-btn nav-auth-btn">Login</button>
         </nav>
       </div>
     </header>
@@ -112,6 +113,67 @@
         </div>
       </div>
     </section>
+
+    <section class="container hidden" id="my-orders-section">
+      <div class="tracking-card orders-card">
+        <div class="section-heading compact-heading">
+          <div>
+            <p class="eyebrow">Your account</p>
+            <h2>My Orders</h2>
+          </div>
+          <button type="button" id="load-my-orders" class="secondary-btn">Refresh</button>
+        </div>
+        <div id="my-orders-list" class="orders-list"></div>
+      </div>
+    </section>
+
+    <div id="auth-modal" class="auth-modal hidden" aria-modal="true" role="dialog">
+      <div class="auth-card">
+        <button type="button" id="close-auth-modal" class="close-btn" aria-label="Close">×</button>
+        <div class="auth-switch">
+          <button type="button" class="auth-tab active" data-auth-view="login">Login</button>
+          <button type="button" class="auth-tab" data-auth-view="signup">Sign Up</button>
+        </div>
+
+        <form id="login-form" class="auth-form">
+          <h3>Welcome back</h3>
+          <label>
+            Email
+            <input type="email" id="login-email" placeholder="you@example.com" required />
+          </label>
+          <label>
+            Password
+            <input type="password" id="login-password" placeholder="Your password" required />
+          </label>
+          <button type="submit" class="primary-btn">Login</button>
+        </form>
+
+        <form id="signup-form" class="auth-form hidden">
+          <h3>Create account</h3>
+          <label>
+            Full name
+            <input type="text" id="signup-name" placeholder="Your name" required />
+          </label>
+          <label>
+            Email
+            <input type="email" id="signup-email" placeholder="you@example.com" required />
+          </label>
+          <label>
+            Password
+            <input type="password" id="signup-password" placeholder="At least 6 characters" required />
+          </label>
+          <label>
+            Phone number
+            <input type="tel" id="signup-phone" placeholder="Phone number" required />
+          </label>
+          <label>
+            Address
+            <textarea id="signup-address" rows="3" placeholder="Your delivery address" required></textarea>
+          </label>
+          <button type="submit" class="primary-btn">Sign Up</button>
+        </form>
+      </div>
+    </div>
 
     <template id="menu-item-template">
       <article class="menu-card">
