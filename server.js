@@ -269,6 +269,10 @@ app.use((req, res) => {
 });
 
 app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    return sendError(res, 400, 'Invalid JSON payload.');
+  }
+
   console.error('Server error:', error);
   sendError(res, 500, 'Internal server error.');
 });
