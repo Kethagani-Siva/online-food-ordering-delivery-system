@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Foodie Cart | Online Ordering</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-bar">
+        <div class="brand-wrap">
+          <div class="brand-mark">F</div>
+          <div>
+            <p class="brand-name">Foodie Cart</p>
+            <small>Fresh • Fast • Delivered</small>
+          </div>
+        </div>
+
+        <nav class="main-nav">
+          <a href="#menu">Menu</a>
+          <a href="#checkout">Checkout</a>
+          <a href="/admin">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container page-layout">
+      <section class="menu-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Order online</p>
+            <h1>Today's menu</h1>
+          </div>
+          <div class="category-filter" id="category-filter" aria-label="Category filter"></div>
+        </div>
+
+        <div id="menu-grid" class="menu-grid" aria-live="polite"></div>
+      </section>
+
+      <aside class="cart-panel">
+        <div class="cart-header">
+          <h2>Your cart</h2>
+          <span id="cart-count" class="cart-count">0 items</span>
+        </div>
+
+        <div id="cart-items" class="cart-items"></div>
+
+        <div class="cart-summary">
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <strong id="subtotal">₹0.00</strong>
+          </div>
+          <div class="summary-row total-row">
+            <span>Total</span>
+            <strong id="total">₹0.00</strong>
+          </div>
+        </div>
+
+        <form id="checkout-form" class="checkout-form">
+          <h3>Checkout</h3>
+
+          <label>
+            Full name
+            <input type="text" name="name" placeholder="Enter your name" required />
+          </label>
+
+          <label>
+            Phone number
+            <input type="tel" name="phone" placeholder="Enter phone number" required />
+          </label>
+
+          <label>
+            Delivery address
+            <textarea name="address" rows="3" placeholder="House number, street, city" required></textarea>
+          </label>
+
+          <button type="submit" class="primary-btn">Place order</button>
+        </form>
+      </aside>
+    </main>
+
+    <section class="container tracking-section hidden" id="tracking-section">
+      <div class="tracking-card">
+        <div>
+          <p class="eyebrow">Live order</p>
+          <h2>Delivery status</h2>
+        </div>
+
+        <div class="tracking-status-row">
+          <span id="status-badge" class="status-badge placed">Placed</span>
+          <button type="button" id="refresh-status" class="secondary-btn">Refresh status</button>
+        </div>
+
+        <div class="tracking-meta">
+          <p>Order ID: <strong id="tracking-order-id">-</strong></p>
+          <p>Total: <strong id="tracking-total">₹0.00</strong></p>
+        </div>
+
+        <div class="progress-bar" aria-label="Order status progress">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+
+        <div class="progress-steps">
+          <span class="step active">Placed</span>
+          <span class="step">Preparing</span>
+          <span class="step">Out for Delivery</span>
+          <span class="step">Delivered</span>
+        </div>
+      </div>
+    </section>
+
+    <template id="menu-item-template">
+      <article class="menu-card">
+        <div class="menu-image" data-category></div>
+        <div class="menu-body">
+          <div class="menu-header-row">
+            <h3 class="menu-name"></h3>
+            <span class="menu-price"></span>
+          </div>
+          <p class="menu-description"></p>
+          <button type="button" class="add-btn">Add to Cart</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="/js/app.js"></script>
+  </body>
+</html>

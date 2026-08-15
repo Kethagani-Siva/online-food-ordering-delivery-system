@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard | Foodie Cart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body class="admin-body">
+    <header class="admin-header">
+      <div class="container admin-header-row">
+        <div>
+          <p class="eyebrow">Restaurant dashboard</p>
+          <h1>Order management</h1>
+        </div>
+        <a href="/" class="secondary-btn">Customer view</a>
+      </div>
+    </header>
+
+    <main class="container admin-layout">
+      <section class="admin-panel">
+        <h2>Add or edit menu item</h2>
+        <form id="menu-form" class="admin-form">
+          <input type="hidden" id="menu-id" />
+
+          <div class="admin-form-grid">
+            <label>
+              Item name
+              <input type="text" id="menu-name" placeholder="Enter item name" required />
+            </label>
+
+            <label>
+              Price (₹)
+              <input type="number" id="menu-price" min="1" step="1" required />
+            </label>
+
+            <label>
+              Category
+              <select id="menu-category" required>
+                <option value="Starters">Starters</option>
+                <option value="Main Course">Main Course</option>
+                <option value="Desserts">Desserts</option>
+                <option value="Beverages">Beverages</option>
+              </select>
+            </label>
+
+            <label>
+              Image filename
+              <input type="text" id="menu-image" placeholder="optional-name.png" />
+            </label>
+          </div>
+
+          <label>
+            Description
+            <textarea id="menu-description" rows="3" placeholder="Describe the food item" required></textarea>
+          </label>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-btn" id="save-menu-btn">Save item</button>
+            <button type="button" class="secondary-btn" id="cancel-edit-btn" hidden>Cancel edit</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="admin-panel">
+        <h2>Menu list</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="menu-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-panel wide-panel">
+        <h2>Orders</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="orders-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/js/admin.js"></script>
+  </body>
+</html>

@@ -1,0 +1,98 @@
+[
+  {
+    "id": 1,
+    "name": "Crispy Veg Spring Rolls",
+    "price": 120,
+    "category": "Starters",
+    "description": "Golden-fried rolls stuffed with vegetables and served with sweet chili dip.",
+    "image": "starter-1.png"
+  },
+  {
+    "id": 2,
+    "name": "Paneer Tikka Bites",
+    "price": 180,
+    "category": "Starters",
+    "description": "Smoky paneer cubes marinated in spices and grilled to perfection.",
+    "image": "starter-2.png"
+  },
+  {
+    "id": 3,
+    "name": "Veg Manchurian",
+    "price": 160,
+    "category": "Starters",
+    "description": "Crispy vegetable dumplings tossed in a rich Indo-Chinese sauce.",
+    "image": "starter-3.png"
+  },
+  {
+    "id": 4,
+    "name": "Butter Chicken Bowl",
+    "price": 260,
+    "category": "Main Course",
+    "description": "Tender chicken pieces in creamy tomato gravy with fragrant basmati rice.",
+    "image": "main-1.png"
+  },
+  {
+    "id": 5,
+    "name": "Paneer Butter Masala",
+    "price": 220,
+    "category": "Main Course",
+    "description": "Cube-soft paneer simmered in smooth, buttery tomato gravy.",
+    "image": "main-2.png"
+  },
+  {
+    "id": 6,
+    "name": "Veg Biryani Deluxe",
+    "price": 240,
+    "category": "Main Course",
+    "description": "Aromatic rice layered with vegetables, herbs, and rich biryani spices.",
+    "image": "main-3.png"
+  },
+  {
+    "id": 7,
+    "name": "Classic Margherita Pizza",
+    "price": 280,
+    "category": "Main Course",
+    "description": "Thin crust pizza topped with tomato sauce, mozzarella, and basil.",
+    "image": "main-4.png"
+  },
+  {
+    "id": 8,
+    "name": "Chocolate Lava Cake",
+    "price": 150,
+    "category": "Desserts",
+    "description": "Warm chocolate cake with a molten center and vanilla cream.",
+    "image": "dessert-1.png"
+  },
+  {
+    "id": 9,
+    "name": "Brownie Sundae",
+    "price": 170,
+    "category": "Desserts",
+    "description": "Fudgy brownie topped with ice cream, nuts, and chocolate sauce.",
+    "image": "dessert-2.png"
+  },
+  {
+    "id": 10,
+    "name": "Mango Cheesecake",
+    "price": 190,
+    "category": "Desserts",
+    "description": "Creamy cheesecake layered with fresh mango and tropical sweetness.",
+    "image": "dessert-3.png"
+  },
+  {
+    "id": 11,
+    "name": "Fresh Lime Soda",
+    "price": 80,
+    "category": "Beverages",
+    "description": "Refreshing lime soda served chilled with a hint of mint.",
+    "image": "drink-1.png"
+  },
+  {
+    "id": 12,
+    "name": "Cold Coffee",
+    "price": 110,
+    "category": "Beverages",
+    "description": "Smooth cold coffee blended with cream and a gentle caramel finish.",
+    "image": "drink-2.png"
+  }
+]
