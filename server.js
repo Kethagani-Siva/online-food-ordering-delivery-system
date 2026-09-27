@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
 const MENU_PATH = path.join(DATA_DIR, 'menu.json');
@@ -550,7 +550,6 @@ app.use((error, req, res, next) => {
   console.error('Server error:', error);
   sendError(res, 500, 'Internal server error.');
 });
-
-app.listen(PORT, () => {
-  console.log('Server running on http://localhost:3000');
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
